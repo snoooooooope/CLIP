@@ -1,6 +1,7 @@
 local CLIP = LibStub("AceAddon-3.0"):GetAddon("CLIP")
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local AceDBOptions = LibStub("AceDBOptions-3.0")
 
 function CLIP:SetupOptions()
     local options = {
@@ -40,6 +41,7 @@ function CLIP:SetupOptions()
                     },
                 },
             },
+            profiles = AceDBOptions:GetOptionsTable(CLIP.db),
         },
     }
 

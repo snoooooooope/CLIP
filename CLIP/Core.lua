@@ -22,12 +22,6 @@ function CLIP:OnInitialize()
     end
 end
 
-function CLIP:OnEnable()
-end
-
-function CLIP:OnDisable()
-end
-
 function CLIP:SetupDatabase()
     self.db = LibStub("AceDB-3.0"):New("CLIPDB", {
         profile = {
@@ -40,6 +34,30 @@ function CLIP:SetupDatabase()
             },
         },
     }, "Default")
+    
+    -- Handle profile changes
+    self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+end
+
+function CLIP:OnProfileChanged()
+    -- Re-apply module states when profile changes
+    if self.RegisteredModules then
+        for name, _ in pairs(self.RegisteredModules) do
+            local enabled = self:IsModuleEnabled(name)
+            local addon = LibStub("AceAddon-3.0"):GetAddon(name, true)
+            
+            if addon then
+                if enabled then
+                    addon:Enable()
+                else
+                    addon:Disable()
+                end
+            end
+        end
+    end
+    self:Print("Profile changed. Module states updated.")
 end
 
 function CLIP:IsModuleEnabled(name)

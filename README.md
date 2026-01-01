@@ -12,6 +12,8 @@ CLIP isnt meant to be used with large, complex addons, instead its meant to piec
 
 *   **Namespace Isolation**: Ensures modules keep their own identity (SavedVariables) instead of merging into CLIP's global namespace.
 
+*   **Profiles**: Saves the enabled/disabled state of modules.
+
 ## Installation & Usage
 
 1.  **Install**: Place the `CLIP` folder in `Interface/AddOns/`
