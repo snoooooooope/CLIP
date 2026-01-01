@@ -1,0 +1,212 @@
+# generate_toc.ps1
+# This script scans all subfolders in the CLIP directory and generates a CLIP.toc file
+# that includes all their files, effectively merging them into one addon.
+
+$addonName = "CLIP"
+$tocFile = "$PSScriptRoot\$addonName.toc"
+$interfaceVersion = "30300" 
+
+Write-Host "Generating $tocFile for Interface $interfaceVersion..."
+
+# Initialize lists
+$savedVariables = @("CLIPDB")
+$libsFiles = @()
+$coreFiles = @()
+$moduleFiles = @()
+$detectedModuleNames = @()
+
+# Define CLIP Core files
+$coreFiles += "Init.lua"
+$coreFiles += "Modules.lua"
+$coreFiles += "Core.lua"
+$coreFiles += "Config.lua"
+
+# Function to parse a TOC file
+function Parse-Toc {
+    param ($path, $relPath)
+    $content = Get-Content $path
+    $files = @()
+    $svs = @()
+    
+    foreach ($line in $content) {
+        $line = $line.Trim()
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        
+        # Parse SavedVariables
+        if ($line -match "^## SavedVariables:\s*(.*)") {
+            $vars = $matches[1].Split(",") | ForEach-Object { $_.Trim() }
+            $svs += $vars
+        }
+        # Skip comments and other metadata
+        elseif ($line.StartsWith("#")) { continue }
+        else {
+            $fileLine = $line -replace "/", "\"
+            $fullPath = Join-Path $relPath $fileLine
+            $files += $fullPath
+        }
+    }
+    
+    return @{ Files = $files; SavedVariables = $svs }
+}
+
+# Scan subfolders
+$subdirs = Get-ChildItem -Path $PSScriptRoot -Directory
+foreach ($dir in $subdirs) {
+    if ($dir.Name.StartsWith(".")) { continue }
+    
+    if ($dir.Name -eq "Libs") {
+        # LibStub -> CallbackHandler -> Ace*
+        $libOrder = @("LibStub", "CallbackHandler-1.0", "AceAddon-3.0", "AceEvent-3.0", "AceDB-3.0", "AceConsole-3.0", "AceGUI-3.0", "AceConfig-3.0", "AceLocale-3.0", "AceHook-3.0")
+        
+        function Get-LibEntry {
+            param($libName)
+            $libPath = Join-Path "$PSScriptRoot\Libs" $libName
+            if (Test-Path $libPath) {
+                # Look for XML first
+                $xml = Get-ChildItem -Path $libPath -Filter "*.xml" | Select-Object -First 1
+                if ($xml) { return "Libs\$libName\$($xml.Name)" }
+                
+                # Look for Lua
+                $lua = Get-ChildItem -Path $libPath -Filter "*.lua" | Select-Object -First 1
+                if ($lua) { return "Libs\$libName\$($lua.Name)" }
+            }
+            return $null
+        }
+
+        foreach ($lib in $libOrder) {
+            $entry = Get-LibEntry -libName $lib
+            if ($entry) { 
+                $libsFiles += $entry 
+            }
+        }
+        
+        # Add any other libs in Libs/ not explicitly listed
+        $allLibs = Get-ChildItem -Path "$PSScriptRoot\Libs" -Directory
+        foreach ($dir in $allLibs) {
+            if ($dir.Name -notin $libOrder) {
+                 $entry = Get-LibEntry -libName $dir.Name
+                 if ($entry) { $libsFiles += $entry }
+            }
+        }
+
+        continue
+    }
+
+    # Look for a .toc file with the same name as the folder
+    $tocPath = Join-Path $dir.FullName "$($dir.Name).toc"
+    
+    # If not found, look for ANY .toc file
+    if (-not (Test-Path $tocPath)) {
+        $anyToc = Get-ChildItem -Path $dir.FullName -Filter "*.toc" | Select-Object -First 1
+        if ($anyToc) { $tocPath = $anyToc.FullName }
+        else { continue }
+    }
+
+    Write-Host "Processing module: $($dir.Name)"
+    
+    # Patch texture paths
+    $moduleFilesToScan = Get-ChildItem -Path $dir.FullName -Recurse -Filter "*.lua"
+    foreach ($luaFile in $moduleFilesToScan) {
+        $content = Get-Content $luaFile.FullName
+        $changed = $false
+        
+        $oldPath = "Interface\\AddOns\\$($dir.Name)"
+        $newPath = "Interface\\AddOns\\CLIP\\$($dir.Name)"
+        
+        $oldPathSingle = "Interface\AddOns\$($dir.Name)"
+        $newPathSingle = "Interface\AddOns\CLIP\$($dir.Name)"
+
+        for ($i = 0; $i -lt $content.Count; $i++) {
+            if ($content[$i] -match [Regex]::Escape($oldPath)) {
+                $content[$i] = $content[$i] -replace [Regex]::Escape($oldPath), $newPath
+                $changed = $true
+            }
+            elseif ($content[$i] -match [Regex]::Escape($oldPathSingle)) {
+                $content[$i] = $content[$i] -replace [Regex]::Escape($oldPathSingle), $newPathSingle
+                $changed = $true
+            }
+        }
+        
+        if ($changed) {
+            Write-Host "  -> Patching paths in $($luaFile.Name)"
+            Set-Content -Path $luaFile.FullName -Value $content
+        }
+    }
+
+    $result = Parse-Toc -path $tocPath -relPath $dir.Name
+    
+    # Add SavedVariables
+    $savedVariables += $result.SavedVariables
+    
+    $detectedModuleNames += $dir.Name
+
+    # Classify files
+    foreach ($f in $result.Files) {
+        # Check against centralized Libs
+        $isStandardLib = $false
+        if ($f -match "LibStub\.lua" -or $f -match "CallbackHandler-1\.0" -or $f -match "Ace.*-3\.0") {
+             $libName = if ($f -match "(Ace\w+-3\.0)") { $matches[1] } 
+                        elseif ($f -match "LibStub") { "LibStub" }
+                        elseif ($f -match "CallbackHandler") { "CallbackHandler-1.0" }
+             
+             if ($libName -and (Test-Path "$PSScriptRoot\Libs\$libName")) {
+                 $isStandardLib = $true
+             }
+        }
+
+        if ($isStandardLib) {
+             continue
+        }
+
+        # Check for other internal libraries
+        if ($f -match "LibStub\.lua" -or $f -match "Ace.*\.xml" -or $f -match "CallbackHandler.*\.xml" -or $f -match "Lib.*\.lua") {
+            $libsFiles += $f
+        }
+        else {
+            $moduleFiles += $f
+        }
+    }
+}
+
+# Remove duplicates from Libs and SavedVariables
+$libsFiles = $libsFiles | Select-Object -Unique
+$savedVariables = $savedVariables | Select-Object -Unique
+
+# Generate Modules.lua
+$modulesLuaPath = "$PSScriptRoot\Modules.lua"
+$modulesLuaContent = @"
+-- This file is auto-generated by generate_toc.ps1
+local CLIP = LibStub("AceAddon-3.0"):GetAddon("CLIP")
+CLIP.RegisteredModules = {
+"@
+
+foreach ($name in $detectedModuleNames) {
+    $modulesLuaContent += "`n    [`"$name`"] = true,"
+}
+
+$modulesLuaContent += "`n}"
+Set-Content -Path $modulesLuaPath -Value $modulesLuaContent
+Write-Host "Generated Modules.lua with $($detectedModuleNames.Count) modules."
+
+# Construct TOC Content
+$tocContent = @"
+## Interface: $interfaceVersion
+## Title: $addonName
+## Notes: Your favorite brand of glue.
+## Author: discord@morucarti
+## Version: 1.0
+## SavedVariables: $($savedVariables -join ", ")
+
+# Libraries (Auto-detected)
+$($libsFiles -join "`n")
+
+# Core Framework
+$($coreFiles -join "`n")
+
+# Modules
+$($moduleFiles -join "`n")
+"@
+
+Set-Content -Path $tocFile -Value $tocContent
+Write-Host "CLIP.toc updated with $($moduleFiles.Count) modules and $($libsFiles.Count) libraries."
+
