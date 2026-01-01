@@ -5,6 +5,18 @@ function CLIP:OnInitialize()
     
     self:SetupDatabase()
     
+    -- Apply module states
+    if self.RegisteredModules then
+        for name, _ in pairs(self.RegisteredModules) do
+            if not self:IsModuleEnabled(name) then
+                local addon = LibStub("AceAddon-3.0"):GetAddon(name, true)
+                if addon then
+                    addon:Disable()
+                end
+            end
+        end
+    end
+    
     if self.SetupOptions then
         self:SetupOptions()
     end
@@ -22,8 +34,32 @@ function CLIP:SetupDatabase()
             minimap = {
                 hide = false,
             },
+            modules = {
+                -- [ModuleName] = true/false (enabled/disabled)
+                ["*"] = true, -- Default to enabled
+            },
         },
     }, "Default")
+end
+
+function CLIP:IsModuleEnabled(name)
+    return self.db.profile.modules[name] ~= false
+end
+
+function CLIP:SetModuleEnabled(name, enabled)
+    self.db.profile.modules[name] = enabled
+    
+    -- Handle Ace3 modules immediately
+    local addon = LibStub("AceAddon-3.0"):GetAddon(name, true)
+    if addon then
+        if enabled then
+            addon:Enable()
+        else
+            addon:Disable()
+        end
+    else
+        self:Print("Module '"..name.."' is not an Ace3 addon. Reload UI to apply changes (if supported).")
+    end
 end
 
 -- Slash Commands

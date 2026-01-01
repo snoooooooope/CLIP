@@ -21,7 +21,7 @@ function CLIP:SetupOptions()
                     },
                     desc = {
                         type = "description",
-                        name = "CLIP automatically detects modules in its folder. Use /clip list to see them.",
+                        name = "Enable or disable modules. Ace3 modules toggle instantly; others may require a UI Reload.",
                         order = 2,
                     },
                     listModules = {
@@ -31,10 +31,35 @@ function CLIP:SetupOptions()
                         func = function() CLIP:SlashCommand("list") end,
                         order = 3,
                     },
+                    modules = {
+                        type = "group",
+                        name = "Modules",
+                        inline = true,
+                        order = 10,
+                        args = {},
+                    },
                 },
             },
         },
     }
+
+    -- Add checkboxes for registered modules
+    if self.RegisteredModules then
+        for name, info in pairs(self.RegisteredModules) do
+            local desc = ""
+            if type(info) == "table" then
+                desc = string.format("Version: %s\nAuthor: %s", info.version or "?", info.author or "?")
+            end
+            
+            options.args.general.args.modules.args[name] = {
+                type = "toggle",
+                name = name,
+                desc = desc,
+                get = function() return CLIP:IsModuleEnabled(name) end,
+                set = function(info, value) CLIP:SetModuleEnabled(name, value) end,
+            }
+        end
+    end
 
     -- Register options
     AceConfig:RegisterOptionsTable("CLIP", options)

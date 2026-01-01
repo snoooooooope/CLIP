@@ -230,7 +230,7 @@ $tocContent = @"
 ## Title: $addonName
 ## Notes: Your favorite brand of glue.
 ## Author: discord@morucarti
-## Version: 1.0.1
+## Version: 1.1.1
 ## SavedVariables: $($savedVariables -join ", ")
 
 # Libraries (Auto-detected)

@@ -10,24 +10,21 @@ CLIP isnt meant to be used with large, complex addons, instead its meant to piec
 
 *   **Automatic TOC Generation**: The `generate_toc.ps1` script scans modules and builds `CLIP.toc` automatically.
 
-## Installation & Usage:
+*   **Namespace Isolation**: Ensures modules keep their own identity (SavedVariables) instead of merging into CLIP's global namespace.
 
-*  1.  **Install**: Place the `CLIP` folder in `Interface/AddOns/`
+## Installation & Usage
 
-*   2.  **Add Modules**: Drop addon folder(s) you want to include into `CLIP/`
-        *   Example: `Interface\AddOns\CLIP\Postal\`
+1.  **Install**: Place the `CLIP` folder in `Interface/AddOns/`
 
-*    3.  **Build**: Run `generate_toc.ps1` inside the `CLIP` folder.
-        *   This script scans subfolders, merges SavedVariables, updates paths, and generates `CLIP.toc` and `Modules.lua`
+2.  **Add Modules**: Drop addon folder(s) you want to include into `CLIP/`
+    *   Example: `Interface\AddOns\CLIP\Postal\`
+
+3.  **Build**: Run `generate_toc.ps1` inside the `CLIP` folder.
+    *   This script scans subfolders, merges SavedVariables, updates paths, and generates `CLIP.toc` and `Modules.lua`
 
 ## Commands
 
-*   `/clip list`: Displays a list of all detected and loaded modules.
+*   `/clip list`: Displays a list of all loaded modules with version/author info.
 
 *   **Settings**: Configuration available in Interface Options -> AddOns -> CLIP.
-
-## Caveats & Known Issues
-
-*   **SavedVariables Reset**: Since addons run as "CLIP", they will store their settings in `WTF/.../SavedVariables/CLIP.lua` instead of their original files. **Your existing settings will not be detected automatically.** You will need to reconfigure addons or manually migrate data.
-
-*   **Addon Detection**: API calls like `IsAddonLoaded("AddonName")` will return `false` because WoW views the entire package as a single addon. Modules that rely on this check to interact with other addons may require modification.
+    *   Non Ace3 addons MAY not correctly disable via checkbox and may have to be manually removed
