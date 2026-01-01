@@ -117,6 +117,7 @@ foreach ($dir in $subdirs) {
         $newPathSingle = "Interface\AddOns\CLIP\$($dir.Name)"
 
         for ($i = 0; $i -lt $content.Count; $i++) {
+            # Patch texture paths
             if ($content[$i] -match [Regex]::Escape($oldPath)) {
                 $content[$i] = $content[$i] -replace [Regex]::Escape($oldPath), $newPath
                 $changed = $true
@@ -125,10 +126,24 @@ foreach ($dir in $subdirs) {
                 $content[$i] = $content[$i] -replace [Regex]::Escape($oldPathSingle), $newPathSingle
                 $changed = $true
             }
+            
+            # Namespace fix for DB creation (local addonName, ns = ...)
+            # This ensures modules use their own name instead of "CLIP" (hopefully)
+            if ($content[$i] -match "^\s*local\s+([a-zA-Z0-9_]+)\s*,\s*([a-zA-Z0-9_]+)\s*=\s*\.\.\.") {
+                $varName = $matches[1]
+                $overrideCode = "; $varName = `"$($dir.Name)`""
+                
+                # Check if we already patched this line
+                if (-not ($content[$i].EndsWith($overrideCode))) {
+                    $content[$i] = $content[$i] + $overrideCode
+                    $changed = $true
+                    Write-Host "    -> Patching namespace in line $($i+1)"
+                }
+            }
         }
         
         if ($changed) {
-            Write-Host "  -> Patching paths in $($luaFile.Name)"
+            Write-Host "  -> Updated $($luaFile.Name)"
             Set-Content -Path $luaFile.FullName -Value $content
         }
     }
@@ -194,7 +209,7 @@ $tocContent = @"
 ## Title: $addonName
 ## Notes: Your favorite brand of glue.
 ## Author: discord@morucarti
-## Version: 1.0
+## Version: 1.0.1
 ## SavedVariables: $($savedVariables -join ", ")
 
 # Libraries (Auto-detected)
