@@ -27,6 +27,7 @@ CLIP isnt meant to be used with large, complex addons, instead its meant to piec
 ## Commands
 
 *   `/clip list`: Displays a list of all loaded modules with version/author info.
+*   `/clip memory`: Displays the combined memory usage.
 
 *   **Settings**: Configuration available in Interface Options -> AddOns -> CLIP.
     *   Non Ace3 addons MAY not correctly disable via checkbox and may have to be manually removed

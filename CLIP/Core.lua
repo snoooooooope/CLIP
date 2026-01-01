@@ -85,7 +85,7 @@ CLIP:RegisterChatCommand("clip", "SlashCommand")
 
 function CLIP:SlashCommand(input)
     if not input or input:trim() == "" then
-        self:Print("Usage: /clip list")
+        self:Print("Usage: /clip list | memory")
         return
     end
 
@@ -116,6 +116,19 @@ function CLIP:SlashCommand(input)
             end
         end
         self:Print("Total: " .. count)
+    elseif command == "memory" or command == "mem" then
+        UpdateAddOnMemoryUsage()
+        local mem = GetAddOnMemoryUsage("CLIP")
+        local memFormatted = ""
+        
+        if mem > 1000 then
+            memFormatted = string.format("%.2f MB", mem / 1000)
+        else
+            memFormatted = string.format("%.0f KB", mem)
+        end
+        
+        self:Print("Total Memory Usage: " .. memFormatted)
+        self:Print("(Includes all loaded modules)")
     else
         self:Print("Unknown command: " .. command)
     end

@@ -32,6 +32,13 @@ function CLIP:SetupOptions()
                         func = function() CLIP:SlashCommand("list") end,
                         order = 3,
                     },
+                    checkMemory = {
+                        type = "execute",
+                        name = "Check Memory",
+                        desc = "Print the current memory usage of CLIP and its modules.",
+                        func = function() CLIP:SlashCommand("memory") end,
+                        order = 4,
+                    },
                     modules = {
                         type = "group",
                         name = "Modules",
