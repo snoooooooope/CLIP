@@ -13,7 +13,7 @@ $savedVariables = @("CLIPDB")
 $libsFiles = @()
 $coreFiles = @()
 $moduleFiles = @()
-$detectedModuleNames = @()
+$detectedModuleObjects = @()
 
 # Define CLIP Core files
 $coreFiles += "Init.lua"
@@ -150,10 +150,31 @@ foreach ($dir in $subdirs) {
 
     $result = Parse-Toc -path $tocPath -relPath $dir.Name
     
+    # Extract metadata
+    $tocContent = Get-Content $tocPath
+    $modTitle = $dir.Name
+    $modVersion = "Unknown"
+    $modAuthor = "Unknown"
+    
+    foreach ($line in $tocContent) {
+        if ($line -match "^## Title:\s*(.*)") { $modTitle = $matches[1].Trim() }
+        if ($line -match "^## Version:\s*(.*)") { $modVersion = $matches[1].Trim() }
+        if ($line -match "^## Author:\s*(.*)") { $modAuthor = $matches[1].Trim() }
+    }
+    
+    $modTitle = $modTitle -replace '"', '\"'
+    $modVersion = $modVersion -replace '"', '\"'
+    $modAuthor = $modAuthor -replace '"', '\"'
+    
     # Add SavedVariables
     $savedVariables += $result.SavedVariables
     
-    $detectedModuleNames += $dir.Name
+    $detectedModuleObjects += @{
+        Name = $dir.Name
+        Title = $modTitle
+        Version = $modVersion
+        Author = $modAuthor
+    }
 
     # Classify files
     foreach ($f in $result.Files) {
@@ -195,13 +216,13 @@ local CLIP = LibStub("AceAddon-3.0"):GetAddon("CLIP")
 CLIP.RegisteredModules = {
 "@
 
-foreach ($name in $detectedModuleNames) {
-    $modulesLuaContent += "`n    [`"$name`"] = true,"
+foreach ($mod in $detectedModuleObjects) {
+    $modulesLuaContent += "`n    [`"$($mod.Name)`"] = { title = `"$($mod.Title)`", version = `"$($mod.Version)`", author = `"$($mod.Author)`" },"
 }
 
 $modulesLuaContent += "`n}"
 Set-Content -Path $modulesLuaPath -Value $modulesLuaContent
-Write-Host "Generated Modules.lua with $($detectedModuleNames.Count) modules."
+Write-Host "Generated Modules.lua with $($detectedModuleObjects.Count) modules."
 
 # Construct TOC Content
 $tocContent = @"

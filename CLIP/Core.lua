@@ -43,8 +43,13 @@ function CLIP:SlashCommand(input)
         
         -- Check for registered modules
         if self.RegisteredModules then
-            for name, _ in pairs(self.RegisteredModules) do
-                self:Print("- " .. name)
+            for name, info in pairs(self.RegisteredModules) do
+                local meta = ""
+                if type(info) == "table" then
+                    -- Format: Name (v1.0 by Author)
+                    meta = string.format(" |cffaaaaaa(v%s by %s)|r", info.version or "?", info.author or "?")
+                end
+                self:Print("- " .. name .. meta)
                 count = count + 1
             end
         else
